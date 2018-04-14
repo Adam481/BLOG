@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -11,24 +13,60 @@ namespace FirstApp.Presentation
 {
     public class Startup
     {
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-        public void ConfigureServices(IServiceCollection services)
-        {
-        }
+                 public IServiceProvider ConfigureServices(IServiceCollection services)
+         {
+            services.AddMvc();
+            services.AddSwaggerGen(swagger =>
+            {
+                swagger.DescribeAllEnumsAsStrings();
+                swagger.SwaggerDoc("v1", new Swashbuckle.AspNetCore.Swagger.Info()
+                {
+                    Title = "DDD_Dropshipping - Ordering Api",
+                    Version = "v2",
+                    Description = "DDD_Dropshipping - Ordering microservice HTTP API"
+                });
+            });
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+            IContainer container = BuildContainer(services);
+
+            return new AutofacServiceProvider(container);
+         }
+
+        
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            app.Run(async (context) =>
+            else
             {
-                await context.Response.WriteAsync("Hello World!");
+                app.UseExceptionHandler();
+            }
+
+            app.UseStatusCodePages();
+
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint(
+                    "/swagger/v1/swagger.json", 
+                    "Ordering API v1 swagger endpoint");
             });
+
+            app.UseMvc();
+        }
+
+
+        private IContainer BuildContainer(IServiceCollection services)
+        {
+
+            var builder = new ContainerBuilder();
+
+            // Register dotnet core services 
+            builder.Populate(services);
+
+            return builder.Build();
         }
     }
 }
